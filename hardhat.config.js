@@ -20,7 +20,7 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: 31337,
-      blockConfirmations: 6,
+      blockConfirmations: 1,
     },
     goerli: {
       url: process.env.GOERLI_RPC_URL,

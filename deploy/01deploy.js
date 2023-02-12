@@ -1,5 +1,6 @@
 const { network } = require("hardhat");
 const { verify } = require("../utils/verify") 
+const { developmentChains } = require("../net-configs")
 
 module.exports = async function ({getNamedAccounts, deployments}) {
     const { deploy } = deployments
@@ -16,7 +17,6 @@ module.exports = async function ({getNamedAccounts, deployments}) {
     if(!(developmentChains.includes(network.name))){
         console.log("Verifying contract deployment in goerli network")
         await verify(voting.address, [])
-        
     }
     console.log("Contract Deployed")
 }
