@@ -2,7 +2,7 @@
 
 pragma solidity >=0.8.17;
 
-error CandidateNotFound(
+error CandidateNotFound (
     uint256 candidate_id
 );
 
@@ -115,7 +115,7 @@ contract Voting {
                     if(keccak256(abi.encodePacked(voter_email)) == keccak256(abi.encodePacked(v.email))){
                         
                         /**
-                        Allow the candidate to vote if it has not voted before.
+                        Allow the candidate to vote if he has not voted before.
                         */
 
                         bool b = eligibleVoters[poll_id][j].hasVoted;

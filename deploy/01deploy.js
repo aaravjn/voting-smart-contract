@@ -8,8 +8,8 @@ module.exports = async function ({getNamedAccounts, deployments}) {
 
     const voting = await deploy("Voting", {
         from: deployer,
-        args: [],
         log: true,
+        args: [],
         waitConfirmations: network.config.blockConfirmations || 1,
     })
 
