@@ -5,6 +5,9 @@ pragma solidity >=0.8.17;
 error CandidateNotFound (
     uint256 candidate_id
 );
+error NotMeetingTimeConstraints();
+error NotAValidPollId();
+error PollAlreadyExists();
 
 contract Voting {
     struct Voter {
@@ -23,6 +26,7 @@ contract Voting {
         string organizationName;
         uint256 startTime;
         uint256 duration;
+        bool isCreated;
     }
 
     mapping(string => Poll) public polls;
@@ -45,11 +49,17 @@ contract Voting {
         uint256 start_time,
         uint256 duration
     ) public {
+
+        if(polls[poll_id].isCreated) {
+            revert PollAlreadyExists();
+        }
+
         Poll memory p;
         p.id = poll_id;
         p.organizationName = org_name;
         p.startTime = start_time;
         p.duration = duration;
+        p.isCreated = true;
         polls[poll_id] = p;
     }
 
@@ -59,6 +69,14 @@ contract Voting {
         string memory name,
         string memory email
     ) public {
+
+        if(block.timestamp - polls[poll_id].startTime <= polls[poll_id].duration){
+            revert NotMeetingTimeConstraints();
+        }
+
+        if(!polls[poll_id].isCreated) {
+            revert NotAValidPollId();
+        }
 
         Voter memory v;
         v.name = name;
@@ -76,9 +94,14 @@ contract Voting {
         string memory email
     ) public {
         
-        /**
-        Need toCheck if the poll id is valid.
-        */
+        if(!polls[poll_id].isCreated) {
+            revert NotAValidPollId();
+        }
+
+        if(block.timestamp - polls[poll_id].startTime <= polls[poll_id].duration){
+            revert NotMeetingTimeConstraints();
+        }
+
         Candidate memory c;
         c.name = name;
         c.candidateID = candidate_id;
@@ -95,6 +118,14 @@ contract Voting {
         string memory voter_email
     ) public {
         
+        if(!polls[poll_id].isCreated) {
+            revert NotAValidPollId();
+        }
+
+        if(block.timestamp - polls[poll_id].startTime <= polls[poll_id].duration){
+            revert NotMeetingTimeConstraints();
+        }
+
         uint256 n = candidates[poll_id].length;
         bool candidateFound = false;
 
@@ -141,6 +172,11 @@ contract Voting {
         string memory poll_id,
         uint256 candidate_id
     ) public view returns(uint256) {
+        
+        if(!polls[poll_id].isCreated) {
+            revert NotAValidPollId();
+        }
+
         uint256 n = candidates[poll_id].length;
         uint256 votes = 0;
 
@@ -173,7 +209,15 @@ contract Voting {
     function deletePoll(
         string memory poll_id
     ) private {
-        require(block.timestamp - polls[poll_id].startTime > polls[poll_id].duration);
+
+        if(!polls[poll_id].isCreated) {
+            revert NotAValidPollId();
+        }
+        
+        if(block.timestamp - polls[poll_id].startTime > polls[poll_id].duration){
+            revert NotMeetingTimeConstraints();
+        }
+
         delete polls[poll_id];
         delete candidates[poll_id];
         delete eligibleVoters[poll_id];
