@@ -69,10 +69,6 @@ contract Voting {
         string memory email
     ) public {
 
-        if(block.timestamp - polls[poll_id].startTime > polls[poll_id].duration){
-            revert NotMeetingTimeConstraints();
-        }
-
         if(!polls[poll_id].isCreated) {
             revert NotAValidPollId();
         }
@@ -97,9 +93,6 @@ contract Voting {
             revert NotAValidPollId();
         }
 
-        if(block.timestamp - polls[poll_id].startTime >= 0){
-            revert NotMeetingTimeConstraints();
-        }
 
         Candidate memory c;
         c.name = name;
