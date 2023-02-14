@@ -32,7 +32,6 @@ contract Voting {
     mapping(string => Poll) public polls;
     mapping(string => Candidate[]) public candidates;
     mapping(string => Voter[]) public eligibleVoters;
-
     /**
     1. Creation of a poll by an organization.
     2. Ability to add eligible participants.
@@ -70,7 +69,7 @@ contract Voting {
         string memory email
     ) public {
 
-        if(block.timestamp - polls[poll_id].startTime <= polls[poll_id].duration){
+        if(block.timestamp - polls[poll_id].startTime > polls[poll_id].duration){
             revert NotMeetingTimeConstraints();
         }
 
@@ -98,7 +97,7 @@ contract Voting {
             revert NotAValidPollId();
         }
 
-        if(block.timestamp - polls[poll_id].startTime <= polls[poll_id].duration){
+        if(block.timestamp - polls[poll_id].startTime >= 0){
             revert NotMeetingTimeConstraints();
         }
 
@@ -122,7 +121,10 @@ contract Voting {
             revert NotAValidPollId();
         }
 
-        if(block.timestamp - polls[poll_id].startTime <= polls[poll_id].duration){
+        if(block.timestamp - polls[poll_id].startTime > polls[poll_id].duration){
+            revert NotMeetingTimeConstraints();
+        }
+        else if(block.timestamp - polls[poll_id].startTime < 0){
             revert NotMeetingTimeConstraints();
         }
 
@@ -214,7 +216,7 @@ contract Voting {
             revert NotAValidPollId();
         }
         
-        if(block.timestamp - polls[poll_id].startTime > polls[poll_id].duration){
+        if(block.timestamp - polls[poll_id].startTime <= polls[poll_id].duration){
             revert NotMeetingTimeConstraints();
         }
 
@@ -222,5 +224,23 @@ contract Voting {
         delete candidates[poll_id];
         delete eligibleVoters[poll_id];
     }
-
+    function time(string memory poll_id) public view returns(bool) {
+        return (block.timestamp - polls[poll_id].startTime < 0);
+    }
 }
+
+// create poll abc, aaravcorp, 1676355531, 1000
+// candi abc, aarav1, 1, aarav1@gmail.com
+// candi abc, aarav2, 2, aarav2@gmail.com
+// voter abc, aaravO, aaravO@gmail.com
+// voter abc, elon, elon@gmail.com
+// vote abc, 1, aaravO@gmail.com
+// vote abc, 2, elon@gmail.com
+
+// create poll def, jaincorp, 1676353331, 1000
+// candi  def, aarav1, 1, aarav1@gmail.com
+// candi def, aarav2, 2, aarav2@gmail.com
+// voter def, aaravO, aaravO@gmail.com
+// voter def, elon, elon@gmail.com
+// vote def, 1, aaravO@gmail.com
+// vote def, 2, elon@gmail.com
