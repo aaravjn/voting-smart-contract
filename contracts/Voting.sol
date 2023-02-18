@@ -24,8 +24,8 @@ contract Voting {
     struct Poll {
         string id;
         string organizationName;
-        uint256 startTime;
-        uint256 duration;
+        int256 startTime;
+        int256 duration;
         bool isCreated;
     }
 
@@ -45,8 +45,8 @@ contract Voting {
     function createPoll (
         string memory poll_id, 
         string memory org_name,
-        uint256 start_time,
-        uint256 duration
+        int256 start_time,
+        int256 duration
     ) public {
 
         if(polls[poll_id].isCreated) {
@@ -93,6 +93,9 @@ contract Voting {
             revert NotAValidPollId();
         }
 
+        if(int256(block.timestamp) - polls[poll_id].startTime > 0) {
+            revert NotMeetingTimeConstraints();
+        }
 
         Candidate memory c;
         c.name = name;
@@ -114,10 +117,10 @@ contract Voting {
             revert NotAValidPollId();
         }
 
-        if(block.timestamp - polls[poll_id].startTime > polls[poll_id].duration){
+        if(int256(block.timestamp) - polls[poll_id].startTime > polls[poll_id].duration){
             revert NotMeetingTimeConstraints();
         }
-        else if(block.timestamp - polls[poll_id].startTime < 0){
+        else if(int256(block.timestamp) - polls[poll_id].startTime < 0){
             revert NotMeetingTimeConstraints();
         }
 
@@ -209,16 +212,13 @@ contract Voting {
             revert NotAValidPollId();
         }
         
-        if(block.timestamp - polls[poll_id].startTime <= polls[poll_id].duration){
+        if(int256(block.timestamp) - polls[poll_id].startTime <= polls[poll_id].duration){
             revert NotMeetingTimeConstraints();
         }
 
         delete polls[poll_id];
         delete candidates[poll_id];
         delete eligibleVoters[poll_id];
-    }
-    function time(string memory poll_id) public view returns(bool) {
-        return (block.timestamp - polls[poll_id].startTime < 0);
     }
 }
 
