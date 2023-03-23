@@ -1,0 +1,35 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/Voting.sol": {
+      "content": "// SPDX-License-Identifier: MIT\n\npragma solidity >=0.8.17;\n\nerror CandidateNotFound (\n    uint256 candidate_id\n);\nerror NotMeetingTimeConstraints();\nerror NotAValidPollId();\nerror PollAlreadyExists();\n\ncontract Voting {\n    struct Voter {\n        string email;\n        string name;\n        bool hasVoted;\n    }\n    struct Candidate {\n        string name;\n        string email;\n        uint256 candidateID;\n        uint256 votes;\n    }\n    struct Poll {\n        string id;\n        string organizationName;\n        int256 startTime;\n        int256 duration;\n        bool isCreated;\n    }\n\n    mapping(string => Poll) public polls;\n    mapping(string => Candidate[]) public candidates;\n    mapping(string => Voter[]) public eligibleVoters;\n    /**\n    1. Creation of a poll by an organization.\n    2. Ability to add eligible participants.\n    3. Adding candidates in the poll.\n    4. Allowing voters to vote, if they have not done so, and withing the time constraints.\n    5. After the end time, remove the poll from the list.\n    6. Allow view live vote count.\n    7. View the candidates' id.\n    */\n    \n    function createPoll (\n        string memory poll_id, \n        string memory org_name,\n        int256 start_time,\n        int256 duration\n    ) public {\n\n        if(polls[poll_id].isCreated) {\n            revert PollAlreadyExists();\n        }\n\n        Poll memory p;\n        p.id = poll_id;\n        p.organizationName = org_name;\n        p.startTime = start_time;\n        p.duration = duration;\n        p.isCreated = true;\n        polls[poll_id] = p;\n    }\n\n\n    function addEligibleVoters(\n        string memory poll_id,\n        string memory name,\n        string memory email\n    ) public {\n\n        if(!polls[poll_id].isCreated) {\n            revert NotAValidPollId();\n        }\n\n        Voter memory v;\n        v.name = name;\n        v.email = email;\n        v.hasVoted = false;\n\n        eligibleVoters[poll_id].push(v);\n    }\n\n\n    function addCandidate(\n        string memory poll_id,\n        string memory name,\n        uint256 candidate_id,\n        string memory email\n    ) public {\n        \n        if(!polls[poll_id].isCreated) {\n            revert NotAValidPollId();\n        }\n\n        if(int256(block.timestamp) - polls[poll_id].startTime > 0) {\n            revert NotMeetingTimeConstraints();\n        }\n\n        Candidate memory c;\n        c.name = name;\n        c.candidateID = candidate_id;\n        c.email = email;\n        c.votes = 0;\n\n        candidates[poll_id].push(c);\n    }\n\n\n    function addVote(\n        string memory poll_id,\n        uint256 candidate_id,\n        string memory voter_email\n    ) public {\n        \n        if(!polls[poll_id].isCreated) {\n            revert NotAValidPollId();\n        }\n\n        if(int256(block.timestamp) - polls[poll_id].startTime > polls[poll_id].duration){\n            revert NotMeetingTimeConstraints();\n        }\n        else if(int256(block.timestamp) - polls[poll_id].startTime < 0){\n            revert NotMeetingTimeConstraints();\n        }\n\n        uint256 n = candidates[poll_id].length;\n        bool candidateFound = false;\n\n        for(uint256 i = 0 ;i < n;i++) {\n\n            if(candidates[poll_id][i].candidateID == candidate_id) {\n                candidateFound = true;\n                uint256 m = eligibleVoters[poll_id].length;\n                \n\n                for(uint256 j = 0;j < m;j++) {\n                    Voter memory v = eligibleVoters[poll_id][i];\n\n                    /**\n                    Comparing hash of the strings as string comparision is not available in solidity.\n                    */\n\n                    if(keccak256(abi.encodePacked(voter_email)) == keccak256(abi.encodePacked(v.email))){\n                        \n                        /**\n                        Allow the candidate to vote if he has not voted before.\n                        */\n\n                        bool b = eligibleVoters[poll_id][j].hasVoted;\n                        if(!b) {\n                            candidates[poll_id][i].votes++;\n                            eligibleVoters[poll_id][j].hasVoted = true;\n                        }\n                        break;\n                    }\n                }\n                break;\n            }\n        }\n        if(!candidateFound) {\n            revert CandidateNotFound(\n                candidate_id\n            );\n        }\n    }\n\n\n    function getVotes(\n        string memory poll_id,\n        uint256 candidate_id\n    ) public view returns(uint256) {\n        \n        if(!polls[poll_id].isCreated) {\n            revert NotAValidPollId();\n        }\n\n        uint256 n = candidates[poll_id].length;\n        uint256 votes = 0;\n\n        bool candidateFound = false;\n        for(uint256 i = 0;i < n;i++) {\n            if(candidates[poll_id][i].candidateID == candidate_id) {\n                votes = candidates[poll_id][i].votes;\n                candidateFound = true;\n                break;\n            }\n        }\n\n        if(!candidateFound) {\n            revert CandidateNotFound(\n                candidate_id\n            );\n        }\n        return votes;\n    }\n\n    function getCandidateID(\n        string memory poll_id,\n        uint256 index\n        \n    ) public view returns(uint256 candidate_id) {\n        \n        return candidates[poll_id][index].candidateID;\n    }\n\n    function deletePoll(\n        string memory poll_id\n    ) private {\n\n        if(!polls[poll_id].isCreated) {\n            revert NotAValidPollId();\n        }\n        \n        if(int256(block.timestamp) - polls[poll_id].startTime <= polls[poll_id].duration){\n            revert NotMeetingTimeConstraints();\n        }\n\n        delete polls[poll_id];\n        delete candidates[poll_id];\n        delete eligibleVoters[poll_id];\n    }\n}\n\n// create poll abc, aaravcorp, 1676355531, 1000\n// candi abc, aarav1, 1, aarav1@gmail.com\n// candi abc, aarav2, 2, aarav2@gmail.com\n// voter abc, aaravO, aaravO@gmail.com\n// voter abc, elon, elon@gmail.com\n// vote abc, 1, aaravO@gmail.com\n// vote abc, 2, elon@gmail.com\n\n// create poll def, jaincorp, 1676353331, 1000\n// candi  def, aarav1, 1, aarav1@gmail.com\n// candi def, aarav2, 2, aarav2@gmail.com\n// voter def, aaravO, aaravO@gmail.com\n// voter def, elon, elon@gmail.com\n// vote def, 1, aaravO@gmail.com\n// vote def, 2, elon@gmail.com"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": false,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
